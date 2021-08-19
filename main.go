@@ -37,7 +37,7 @@ func main() {
 
 		var replyMsg tgbotapi.MessageConfig
 		if msg.Message.Command() == "start" {
-			newMsg := "Welcome to TorrentGenie \n\n Search torrents by typing the name"
+			newMsg := "Welcome to TorrentGenie \n\n Search torrents by sending a name"
 			msg := tgbotapi.NewMessage(msg.Message.Chat.ID, newMsg)
 			bot.Send(msg)
 			continue
