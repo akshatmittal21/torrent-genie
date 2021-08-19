@@ -4,7 +4,7 @@ const (
 	LogPath = "./logs/log.log"
 
 	ApiURL       = "https://apibay.org/q.php"
-	TorrentCount = 5
+	TorrentCount = 7
 )
 
 // messages
