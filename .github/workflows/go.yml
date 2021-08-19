@@ -20,3 +20,5 @@ jobs:
 
     - name: Build
       run: go build 
+    - name: Restarting service
+      run: sudo systemctl restart torrent-genie
