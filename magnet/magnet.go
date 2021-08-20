@@ -1,8 +1,13 @@
 package magnet
 
 import (
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/akshatmittal21/torrent-genie/constants"
+	"github.com/akshatmittal21/torrent-genie/logger"
 )
 
 func GetLink(infoHash string, name string) string {
@@ -12,6 +17,24 @@ func GetLink(infoHash string, name string) string {
 	magnetLink = strings.Replace(magnetLink, "$$NAME$$", name, 1)
 	magnetLink = strings.Replace(magnetLink, "$$TRACKERS$$", printTrackers(), 1)
 	return magnetLink
+}
+
+func GetFile(infoHash string) []byte {
+	torrentLink := constants.TorrentURL
+	torrentLink = strings.Replace(torrentLink, "$$INFO_HASH$$", infoHash, 1)
+
+	resp, err := http.Get(torrentLink)
+	if err != nil {
+		logger.Error("GetFile: fetch err ", err)
+		return nil
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("GetFile: reading err ", err)
+		return nil
+	}
+	return body
 }
 
 func printTrackers() string {
