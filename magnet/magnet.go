@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/akshatmittal21/torrent-genie/constants"
 	"github.com/akshatmittal21/torrent-genie/logger"
@@ -22,8 +23,10 @@ func GetLink(infoHash string, name string) string {
 func GetFile(infoHash string) []byte {
 	torrentLink := constants.TorrentURL
 	torrentLink = strings.Replace(torrentLink, "$$INFO_HASH$$", infoHash, 1)
-
-	resp, err := http.Get(torrentLink)
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := client.Get(torrentLink)
 	if err != nil {
 		logger.Error("GetFile: fetch err ", err)
 		return nil
