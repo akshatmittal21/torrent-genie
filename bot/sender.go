@@ -11,7 +11,7 @@ import (
 type sender struct {
 	ChatID    int64
 	Type      constants.MessageType
-	MsgConfig tgbotapi.MessageConfig
+	MsgConfig tgbotapi.Chattable
 	Torrents  []torrent.Torrent
 }
 
@@ -65,12 +65,21 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 	}
 	if replyNo > 0 && len(torrents) > 0 && len(torrents) >= replyNo {
 		tor := torrents[replyNo-1]
-		magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
 
-		msgstring := tor.Name + "\n\n" + "Copy the magnet below" + "\n\n" + "`" + magnetLink + "`"
-		replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, msgstring)
-		replyMsg.ParseMode = tgbotapi.ModeMarkdown
-		replyMsg.ReplyToMessageID = msg.Message.MessageID
+		torrentData := magnet.GetFile(tor.InfoHash)
+		if torrentData != nil {
+			file := tgbotapi.FileBytes{Name: tor.Name + ".torrent", Bytes: torrentData}
+			newMsg := tgbotapi.NewDocumentUpload(msg.Message.Chat.ID, file)
+			senderCh <- sender{ChatID: msg.Message.Chat.ID, Type: constants.Magnet, MsgConfig: newMsg}
+
+		} else {
+			magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
+
+			msgstring := tor.Name + "\n\n" + "Copy the magnet below" + "\n\n" + "`" + magnetLink + "`"
+			replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, msgstring)
+			replyMsg.ParseMode = tgbotapi.ModeMarkdown
+			replyMsg.ReplyToMessageID = msg.Message.MessageID
+		}
 
 	} else {
 		replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, constants.INVALID_REPLY)

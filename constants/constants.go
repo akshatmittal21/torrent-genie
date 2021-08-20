@@ -5,8 +5,12 @@ const (
 	DBLogPath = "./logs/db/log.log"
 	DBPath    = "./db/users.db"
 
-	ApiURL       = "https://apibay.org/q.php"
 	TorrentCount = 7
+)
+
+const (
+	ApiURL     = "https://apibay.org/q.php"
+	TorrentURL = "https://itorrents.org/torrent/$$INFO_HASH$$.torrent"
 )
 
 // messages
