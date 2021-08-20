@@ -133,7 +133,9 @@ func Init(ch chan os.Signal) error {
 func recoverPanic(bot *tgbotapi.BotAPI) {
 	if err := recover(); err != nil {
 		logger.Error("panic occurred:", err)
-		notifyAdmin(bot, "!!!Panic Occured!!!")
+		if bot != nil {
+			notifyAdmin(bot, "!!!Panic Occured!!!")
+		}
 	}
 }
 
