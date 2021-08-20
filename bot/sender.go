@@ -64,7 +64,7 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 		}
 	}
 	if replyNo > 0 && len(torrents) > 0 && len(torrents) >= replyNo {
-		tor := torrents[replyNo-1+20]
+		tor := torrents[replyNo-1]
 		magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
 
 		msgstring := tor.Name + "\n\n" + "Copy the magnet below" + "\n\n" + "`" + magnetLink + "`"
