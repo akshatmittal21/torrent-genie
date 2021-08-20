@@ -8,20 +8,28 @@ import (
 	"time"
 
 	"github.com/akshatmittal21/torrent-genie/constants"
+	"github.com/akshatmittal21/torrent-genie/db"
 	"github.com/akshatmittal21/torrent-genie/logger"
-	"github.com/akshatmittal21/torrent-genie/magnet"
 	"github.com/akshatmittal21/torrent-genie/torrent"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/robfig/cron"
 )
 
-type MessageLog struct {
+type msgLog struct {
 	MessageID int
 	Torrents  []torrent.Torrent
 }
 
+type messenger struct {
+	ChatID int64
+	msgLog
+}
+
+var bot *tgbotapi.BotAPI
+
 func Init(ch chan os.Signal) error {
 
+	var err error
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
 	if err != nil {
 		logger.Error("Error creating bot", err)
@@ -30,23 +38,40 @@ func Init(ch chan os.Signal) error {
 
 	logger.Info("Authorized on account ", bot.Self.UserName)
 
+	// init logs
+	msgLogs := make(map[int64][]msgLog)
+
+	// init channels
+	senderCh := make(chan sender, 100)
+	messengerCh := make(chan messenger, 100)
+
+	go startSender(bot, senderCh, messengerCh)
+
+	go func(ch <-chan messenger) {
+		for data := range ch {
+			msgLogs[data.ChatID] = append(msgLogs[data.ChatID], msgLog{data.MessageID, data.Torrents})
+		}
+	}(messengerCh)
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	msgLogs := make(map[int64][]MessageLog)
 
 	// clear cache at midnight
 	c := cron.New()
 	c.AddFunc("@midnight", func() {
 		logger.Info("Clearing cache")
-		msgLogs = make(map[int64][]MessageLog)
+		msgLogs = make(map[int64][]msgLog)
 		logger.Rotate()
 	})
 	c.Start()
+
+	// start listening for updates
 	messages, err := bot.GetUpdatesChan(u)
 	if err != nil {
 		logger.Error("Error getting updates", err)
 		return err
 	}
+
 	go func() {
 		defer recoverPanic(bot)
 
@@ -56,76 +81,41 @@ func Init(ch chan os.Signal) error {
 			}
 
 			// Initial message
-			var replyMsg tgbotapi.MessageConfig
 			if msg.Message.Command() == "start" {
 				msg := tgbotapi.NewMessage(msg.Message.Chat.ID, constants.WELCOME_MSG)
 				bot.Send(msg)
+				continue
+			}
+
+			if msg.Message.Command() == "users" {
+				adminID, err := strconv.ParseInt(os.Getenv("BOT_ADMIN"), 10, 64)
+				if err != nil {
+					logger.Error("Error getting admin id", err)
+					continue
+				}
+				if msg.Message.Chat.ID == adminID {
+					count := db.GetInstance().Find(&db.UserConfig{}).RowsAffected
+					msg := tgbotapi.NewMessage(adminID, fmt.Sprintf("%d users", count))
+					bot.Send(msg)
+				} else {
+					msg := tgbotapi.NewMessage(msg.Message.Chat.ID, constants.INVALID_COMMAND)
+					bot.Send(msg)
+				}
 				continue
 
 			}
 			isReply, err := strconv.Atoi(msg.Message.Text)
 			if err == nil {
-				var msgID int
-				var torrents []torrent.Torrent
-				if msg.Message.ReplyToMessage != nil {
-					msgID = msg.Message.ReplyToMessage.MessageID
-				}
-				msglog := msgLogs[msg.Message.Chat.ID]
-				if len(msglog) > 0 {
-					if msgID == 0 {
-						torrents = msglog[len(msglog)-1].Torrents
-					} else {
-						for _, m := range msglog {
-							if m.MessageID == msgID {
-								torrents = m.Torrents
-								break
-							}
-						}
-					}
-				}
-				if isReply > 0 && len(torrents) > 0 && len(torrents) >= isReply {
-					tor := torrents[isReply-1]
-					magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
-
-					msgstring := "Copy the magnet below for: " + tor.Name + "\n\n" + "`" + magnetLink + "`"
-					replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, msgstring)
-					replyMsg.ParseMode = tgbotapi.ModeMarkdown
-					replyMsg.ReplyToMessageID = msg.Message.MessageID
-
-				} else {
-					replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, constants.INVALID_REPLY)
-
-				}
-
-				_, err := bot.Send(replyMsg)
-				if err != nil {
-					logger.Error(err)
-					replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, constants.SOMETHING_WENT_WRONG)
-					bot.Send(replyMsg)
-				}
-
+				go sendMagnet(msg, msgLogs, isReply, senderCh)
 			} else {
-				var torrentResp string
-				torrents := torrent.GetTorrents(msg.Message.Text)
-				if len(torrents) > 0 {
-					if torrents[0].ID == "0" {
-						torrentResp = constants.NO_RESULTS
-					} else {
-						torrentResp = torrent.CreateResponse(torrents)
-						torrentResp = torrentResp + "\nReply with option number to get magnet link.."
-					}
-				} else {
-					torrentResp = constants.NO_RESULTS
-				}
-				replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, torrentResp)
-				replyMsg.ReplyToMessageID = msg.Message.MessageID
-				update, err := bot.Send(replyMsg)
-				if err != nil {
-					logger.Error(err)
-					replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, constants.SOMETHING_WENT_WRONG)
-					bot.Send(replyMsg)
-				}
-				msgLogs[msg.Message.Chat.ID] = append(msgLogs[msg.Message.Chat.ID], MessageLog{update.MessageID, torrents})
+				go sendTorrents(msg, senderCh)
+			}
+
+			// Update user in DB
+			chat := msg.Message.Chat
+			user := db.UserConfig{UserID: chat.ID, FirstName: chat.FirstName, LastName: chat.LastName, UserName: chat.UserName}
+			if db.GetInstance().Model(user).Where("user_id = ?", chat.ID).Updates(&user).RowsAffected == 0 {
+				db.GetInstance().Create(&user)
 			}
 		}
 	}()
@@ -143,17 +133,17 @@ func Init(ch chan os.Signal) error {
 func recoverPanic(bot *tgbotapi.BotAPI) {
 	if err := recover(); err != nil {
 		logger.Error("panic occurred:", err)
+		notifyAdmin(bot, "!!!Panic Occured!!!")
 	}
-	notifyAdmin(bot, "!!!Panic Occured!!!")
 }
 
 func notifyAdmin(bot *tgbotapi.BotAPI, message string) {
-	adminID, err := strconv.Atoi(os.Getenv("BOT_ADMIN"))
+	adminID, err := strconv.ParseInt(os.Getenv("BOT_ADMIN"), 10, 64)
 	if err != nil {
 		logger.Error("Error getting admin id", err)
 		return
 	}
-	msg := tgbotapi.NewMessage(int64(adminID), message)
+	msg := tgbotapi.NewMessage(adminID, message)
 	bot.Send(msg)
 }
 

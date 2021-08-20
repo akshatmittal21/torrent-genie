@@ -1,7 +1,9 @@
 package constants
 
 const (
-	LogPath = "./logs/log.log"
+	LogPath   = "./logs/system/log.log"
+	DBLogPath = "./logs/db/log.log"
+	DBPath    = "./db/users.db"
 
 	ApiURL       = "https://apibay.org/q.php"
 	TorrentCount = 7
@@ -13,4 +15,12 @@ const (
 	INVALID_REPLY        = "Invalid reply, please try again"
 	SOMETHING_WENT_WRONG = "Something went wrong, please try again"
 	NO_RESULTS           = "No torrents found"
+	INVALID_COMMAND      = "Admin use only"
+)
+
+type MessageType string
+
+const (
+	Magnet  MessageType = "magnet"
+	Torrent             = "torrent"
 )
