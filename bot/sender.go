@@ -71,7 +71,7 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 			file := tgbotapi.FileBytes{Name: tor.Name + ".torrent", Bytes: torrentData}
 			newMsg := tgbotapi.NewDocumentUpload(msg.Message.Chat.ID, file)
 			senderCh <- sender{ChatID: msg.Message.Chat.ID, Type: constants.Magnet, MsgConfig: newMsg}
-
+			return
 		} else {
 			magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
 
