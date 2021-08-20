@@ -94,7 +94,8 @@ func Init(ch chan os.Signal) error {
 					continue
 				}
 				if msg.Message.Chat.ID == adminID {
-					count := db.GetInstance().Find(&db.UserConfig{}).RowsAffected
+					var count int64
+					db.GetInstance().Find(&db.UserConfig{}).Count(&count)
 					msg := tgbotapi.NewMessage(adminID, fmt.Sprintf("%d users", count))
 					bot.Send(msg)
 				} else {
