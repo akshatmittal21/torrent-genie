@@ -30,7 +30,7 @@ var bot *tgbotapi.BotAPI
 func Init(ch chan os.Signal) error {
 
 	var err error
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
+	bot, err = tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
 	if err != nil {
 		logger.Error("Error creating bot", err)
 		return err
