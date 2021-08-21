@@ -77,7 +77,7 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 
 			newMsg.ReplyToMessageID = msg.Message.MessageID
 			newMsg.Caption = msgstring
-			replyMsg.ParseMode = tgbotapi.ModeMarkdown
+			newMsg.ParseMode = tgbotapi.ModeMarkdown
 			senderCh <- sender{ChatID: msg.Message.Chat.ID, Type: constants.Magnet, MsgConfig: newMsg}
 			return
 		} else {
