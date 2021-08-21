@@ -62,7 +62,7 @@ func GetTorrents(searchText string) []Torrent {
 func CreateResponse(torrents []Torrent) string {
 	var response string
 	for i, torrent := range torrents {
-		response += fmt.Sprintf("%d) %s - [%s]  (%s\u25B2 / %s\u25BC)\n\n", i+1, torrent.Name, getSize(torrent.Size), torrent.Seeders, torrent.Leechers)
+		response += fmt.Sprintf("%d) %s - [%s]  (%sSeeds / %s Peers)\n\n", i+1, torrent.Name, getSize(torrent.Size), torrent.Seeders, torrent.Leechers)
 
 	}
 	return response
