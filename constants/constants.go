@@ -6,11 +6,38 @@ const (
 	DBPath    = "./db/users.db"
 
 	TorrentCount = 7
+	RecentCount  = 10
 )
 
 const (
-	ApiURL     = "https://apibay.org/q.php"
-	TorrentURL = "https://itorrents.org/torrent/$$INFO_HASH$$.torrent"
+	ApiURL           = "https://apibay.org/q.php"
+	RecentTorrentURL = "https://apibay.org/precompiled/data_top100_$$CODE$$.json"
+	TorrentURL       = "https://itorrents.org/torrent/$$INFO_HASH$$.torrent"
+)
+
+type RecentCode string
+
+const (
+	RecentAllCode    RecentCode = "recent"
+	AudioCode                   = "100"
+	GamesCode                   = "400"
+	VideoCode                   = "200"
+	PornCode                    = "500"
+	ApplicationsCode            = "300"
+	OthersCode                  = "600"
+)
+
+//commands
+const (
+	START           string = "start"
+	USERS                  = "users"
+	RECENT                 = "recent"
+	TOPVIDEOS              = "topvideos"
+	TOPAUDIO               = "topaudio"
+	TOPGAMES               = "topgames"
+	TOPPORN                = "topporn"
+	TOPAPPLICATIONS        = "topapplications"
+	OTHERS                 = "others"
 )
 
 // messages

@@ -105,6 +105,11 @@ func Init(ch chan os.Signal) error {
 				continue
 
 			}
+			if msg.Message.IsCommand() {
+				go sendCommandResponse(msg, msg.Message.Command(), senderCh)
+				continue
+			}
+
 			isReply, err := strconv.Atoi(msg.Message.Text)
 			if err == nil {
 				go sendMagnet(msg, msgLogs, isReply, senderCh)

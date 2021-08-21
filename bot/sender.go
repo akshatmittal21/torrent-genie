@@ -105,7 +105,46 @@ func sendTorrents(msg tgbotapi.Update, senderCh chan<- sender) {
 			torrentResp = constants.NO_RESULTS
 		} else {
 			torrentResp = torrent.CreateResponse(torrents)
-			torrentResp = torrentResp + "\nReply with option number to get magnet link.."
+			torrentResp = torrentResp + "\nReply with option number to get torrent.."
+		}
+	} else {
+		torrentResp = constants.NO_RESULTS
+	}
+	replyMsg := tgbotapi.NewMessage(msg.Message.Chat.ID, torrentResp)
+	replyMsg.ReplyToMessageID = msg.Message.MessageID
+	senderCh <- sender{ChatID: msg.Message.Chat.ID, Type: constants.Torrent, MsgConfig: replyMsg, Torrents: torrents}
+
+}
+
+// Sending torrents
+func sendCommandResponse(msg tgbotapi.Update, command string, senderCh chan<- sender) {
+	defer recoverPanic(bot)
+	var torrentResp string
+	var torrents []torrent.Torrent
+	switch command {
+	case constants.RECENT:
+		torrents = torrent.GetRecentTorrents(constants.RecentAllCode)
+	case constants.TOPAUDIO:
+		torrents = torrent.GetRecentTorrents(constants.AudioCode)
+	case constants.TOPVIDEOS:
+		torrents = torrent.GetRecentTorrents(constants.VideoCode)
+	case constants.TOPAPPLICATIONS:
+		torrents = torrent.GetRecentTorrents(constants.ApplicationsCode)
+	case constants.TOPPORN:
+		torrents = torrent.GetRecentTorrents(constants.PornCode)
+	case constants.TOPGAMES:
+		torrents = torrent.GetRecentTorrents(constants.GamesCode)
+	case constants.OTHERS:
+		torrents = torrent.GetRecentTorrents(constants.OthersCode)
+
+	}
+
+	if len(torrents) > 0 {
+		if torrents[0].ID == "0" {
+			torrentResp = constants.NO_RESULTS
+		} else {
+			torrentResp = torrent.CreateResponse(torrents)
+			torrentResp = torrentResp + "\nReply with option number to get torrent.."
 		}
 	} else {
 		torrentResp = constants.NO_RESULTS
