@@ -73,10 +73,11 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 			newMsg := tgbotapi.NewDocumentUpload(msg.Message.Chat.ID, file)
 
 			magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
-			msgstring := tor.Name + "\n\n" + "Copy the magnet below or download the torrent file" + "\n\n" + "`" + magnetLink + "`"
+			msgstring := "Copy the magnet below or download the torrent file" + "\n\n" + "`" + magnetLink + "`"
 
 			newMsg.ReplyToMessageID = msg.Message.MessageID
 			newMsg.Caption = msgstring
+			replyMsg.ParseMode = tgbotapi.ModeMarkdown
 			senderCh <- sender{ChatID: msg.Message.Chat.ID, Type: constants.Magnet, MsgConfig: newMsg}
 			return
 		} else {
