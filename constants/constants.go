@@ -11,8 +11,12 @@ const (
 
 const (
 	ApiURL           = "https://apibay.org/q.php"
-	RecentTorrentURL = "https://apibay.org/precompiled/data_top100_$$CODE$$.json"
-	TorrentURL       = "https://itorrents.org/torrent/$$INFO_HASH$$.torrent"
+	RecentTorrentURL = "https://apibay.org/precompiled/data_top100_${CODE}.json"
+	TorrentURL       = "https://itorrents.org/torrent/${INFO_HASH}.torrent"
+)
+
+const (
+	MagnetLink string = "magnet:?xt=urn:btih:${INFO_HASH}&dn=${NAME}${TRACKERS}"
 )
 
 type RecentCode string

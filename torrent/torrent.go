@@ -36,7 +36,7 @@ func GetRecentTorrents(code constants.RecentCode) []Torrent {
 	var recentTorrents []RecentTorrent
 	var torrents []Torrent
 
-	recentURL := strings.Replace(constants.RecentTorrentURL, "$$CODE$$", string(code), 1)
+	recentURL := strings.Replace(constants.RecentTorrentURL, "${CODE}", string(code), 1)
 	resp, err := http.Get(recentURL)
 	if err != nil {
 		logger.Error("GetTorrents: fetch err ", err)
