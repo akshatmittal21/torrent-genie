@@ -61,6 +61,7 @@ func Init(ch chan os.Signal) error {
 	c.AddFunc("@midnight", func() {
 		logger.Info("Clearing cache")
 		msgLogs = make(map[int64][]msgLog)
+		logger.Info("Rotating Logs")
 		logger.Rotate()
 	})
 	c.Start()

@@ -12,17 +12,17 @@ import (
 )
 
 func GetLink(infoHash string, name string) string {
-	magnetLink := `magnet:?xt=urn:btih:$$INFO_HASH$$&dn=$$NAME$$$$TRACKERS$$`
+	magnetLink := constants.MagnetLink
 	name = url.QueryEscape(name)
-	magnetLink = strings.Replace(magnetLink, "$$INFO_HASH$$", infoHash, 1)
-	magnetLink = strings.Replace(magnetLink, "$$NAME$$", name, 1)
-	magnetLink = strings.Replace(magnetLink, "$$TRACKERS$$", printTrackers(), 1)
+	magnetLink = strings.Replace(magnetLink, "${INFO_HASH}", infoHash, 1)
+	magnetLink = strings.Replace(magnetLink, "${NAME}", name, 1)
+	magnetLink = strings.Replace(magnetLink, "${TRACKERS}", printTrackers(), 1)
 	return magnetLink
 }
 
 func GetFile(infoHash string) []byte {
 	torrentLink := constants.TorrentURL
-	torrentLink = strings.Replace(torrentLink, "$$INFO_HASH$$", infoHash, 1)
+	torrentLink = strings.Replace(torrentLink, "${INFO_HASH}", infoHash, 1)
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
