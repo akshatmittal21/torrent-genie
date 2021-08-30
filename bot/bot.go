@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/akshatmittal21/torrent-genie/constants"
@@ -26,20 +27,34 @@ type messenger struct {
 }
 
 var bot *tgbotapi.BotAPI
+var once sync.Once
+var msgLogs map[int64][]msgLog
+
+func getBot() *tgbotapi.BotAPI {
+	if bot == nil {
+		once.Do(
+			func() {
+				var err error
+				bot, err = tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
+				if err != nil {
+					logger.Error("Error creating bot", err)
+					os.Exit(1)
+					return
+				}
+			})
+	}
+	return bot
+}
 
 func Init(ch chan os.Signal) error {
 
 	var err error
-	bot, err = tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
-	if err != nil {
-		logger.Error("Error creating bot", err)
-		return err
-	}
+	bot := getBot()
 
 	logger.Info("Authorized on account ", bot.Self.UserName)
 
 	// init logs
-	msgLogs := make(map[int64][]msgLog)
+	msgLogs = make(map[int64][]msgLog)
 
 	// init channels
 	senderCh := make(chan sender, 100)
@@ -57,15 +72,18 @@ func Init(ch chan os.Signal) error {
 	u.Timeout = 60
 
 	// clear cache at midnight
-	c := cron.New()
-	c.AddFunc("@midnight", func() {
-		logger.Info("Clearing cache")
-		msgLogs = make(map[int64][]msgLog)
-		logger.Info("Rotating Logs")
-		logger.Rotate()
-	})
-	c.Start()
+	loc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		logger.Error("cron error", err)
+		notifyAdmin("!!! cron error !!!")
+	}
+	c := cron.NewWithLocation(loc)
+	c.AddFunc("@midnight", resetInMemoryData)
+	// invoke recommender
+	c.AddFunc("0 0 17 * * *", sendRecommendMsg)
 
+	c.Start()
+	defer c.Stop()
 	// start listening for updates
 	messages, err := bot.GetUpdatesChan(u)
 	if err != nil {
@@ -74,14 +92,13 @@ func Init(ch chan os.Signal) error {
 	}
 
 	go func() {
-		defer recoverPanic(bot)
+		defer recoverPanic()
 
 		for msg := range messages {
 			if msg.Message == nil { // ignore any non-Message Updates
 				continue
 			}
 
-			// Initial message
 			if msg.Message.Command() == "start" {
 				msg := tgbotapi.NewMessage(msg.Message.Chat.ID, constants.WELCOME_MSG)
 				bot.Send(msg)
@@ -105,6 +122,19 @@ func Init(ch chan os.Signal) error {
 				}
 				continue
 
+			}
+			if msg.Message.Command() == "togglerecommend" {
+				adminID, err := strconv.ParseInt(os.Getenv("BOT_ADMIN"), 10, 64)
+				if err != nil {
+					logger.Error("Error getting admin id", err)
+					continue
+				}
+				if msg.Message.Chat.ID == adminID {
+					constants.IsRecommendationOn = !constants.IsRecommendationOn
+					msg := tgbotapi.NewMessage(adminID, fmt.Sprintf("Recommendation is %s", strconv.FormatBool(constants.IsRecommendationOn)))
+					bot.Send(msg)
+				}
+				continue
 			}
 			if msg.Message.IsCommand() {
 				go sendCommandResponse(msg, msg.Message.Command(), senderCh)
@@ -130,40 +160,39 @@ func Init(ch chan os.Signal) error {
 	signalType := <-ch
 	fmt.Println("Exit command received, Exiting...")
 	fmt.Println("Received signal type : ", signalType)
-
-	shutdown(bot)
-	c.Stop()
+	shutdown()
 	return nil
 }
 
 // panic recover
-func recoverPanic(bot *tgbotapi.BotAPI) {
+func recoverPanic() {
 	if err := recover(); err != nil {
 		logger.Error("panic occurred:", err)
-		if bot != nil {
-			notifyAdmin(bot, "!!!Panic Occured!!!")
-		}
+		notifyAdmin("!!! Panic occured !!!")
 	}
 }
 
-func notifyAdmin(bot *tgbotapi.BotAPI, message string) {
+func notifyAdmin(message string) {
+	bot := getBot()
 	adminID, err := strconv.ParseInt(os.Getenv("BOT_ADMIN"), 10, 64)
 	if err != nil {
 		logger.Error("Error getting admin id", err)
 		return
 	}
 	msg := tgbotapi.NewMessage(adminID, message)
-	bot.Send(msg)
+	if bot != nil {
+		bot.Send(msg)
+	}
 }
 
-func shutdown(bot *tgbotapi.BotAPI) {
+func shutdown() {
 	// Gracefully shutting down server
 	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
 
 	// sending notification to admin
 	adminCh := make(chan struct{})
 	go func() {
-		notifyAdmin(bot, "!!! Server shutdown !!!")
+		notifyAdmin("!!! Server shutdown !!!")
 		adminCh <- struct{}{}
 	}()
 
@@ -174,5 +203,15 @@ func shutdown(bot *tgbotapi.BotAPI) {
 	case <-tc.Done():
 		logger.Info("Timeout reached")
 	}
-	bot.StopReceivingUpdates()
+	bot := getBot()
+	if bot != nil {
+		bot.StopReceivingUpdates()
+	}
+}
+
+func resetInMemoryData() {
+	logger.Info("Clearing cache")
+	msgLogs = make(map[int64][]msgLog)
+	logger.Info("Rotating Logs")
+	logger.Rotate()
 }

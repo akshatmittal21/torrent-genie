@@ -30,6 +30,11 @@ type UserConfig struct {
 	DeletedAt gorm.DeletedAt
 }
 
+type APIUser struct {
+	UserID    int64
+	FirstName string
+}
+
 // GetInstance : to create single instance of the database
 func GetInstance() *gorm.DB {
 	newLogger := gormlogger.New(
@@ -68,4 +73,11 @@ func GetInstance() *gorm.DB {
 			})
 	}
 	return dbInstance
+}
+
+// get all users
+func GetAllUsers() []APIUser {
+	var users []APIUser
+	GetInstance().Model(&UserConfig{}).Find(&users)
+	return users
 }

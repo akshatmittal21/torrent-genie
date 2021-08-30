@@ -1,7 +1,10 @@
 package bot
 
 import (
+	"strings"
+
 	"github.com/akshatmittal21/torrent-genie/constants"
+	"github.com/akshatmittal21/torrent-genie/db"
 	"github.com/akshatmittal21/torrent-genie/logger"
 	"github.com/akshatmittal21/torrent-genie/magnet"
 	"github.com/akshatmittal21/torrent-genie/torrent"
@@ -17,7 +20,7 @@ type sender struct {
 
 // Default sender
 func startSender(bot *tgbotapi.BotAPI, senderCh <-chan sender, messengerCh chan<- messenger) {
-	defer recoverPanic(bot)
+	defer recoverPanic()
 
 	for data := range senderCh {
 		var err error
@@ -42,7 +45,7 @@ func startSender(bot *tgbotapi.BotAPI, senderCh <-chan sender, messengerCh chan<
 
 // Sending magnet link
 func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, senderCh chan<- sender) {
-	defer recoverPanic(bot)
+	defer recoverPanic()
 	var msgID int
 	var torrents []torrent.Torrent
 	var replyMsg tgbotapi.MessageConfig
@@ -97,7 +100,7 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 
 // Sending torrents
 func sendTorrents(msg tgbotapi.Update, senderCh chan<- sender) {
-	defer recoverPanic(bot)
+	defer recoverPanic()
 	var torrentResp string
 	torrents := torrent.GetTorrents(msg.Message.Text)
 	if len(torrents) > 0 {
@@ -118,7 +121,7 @@ func sendTorrents(msg tgbotapi.Update, senderCh chan<- sender) {
 
 // Sending torrents
 func sendCommandResponse(msg tgbotapi.Update, command string, senderCh chan<- sender) {
-	defer recoverPanic(bot)
+	defer recoverPanic()
 	var torrentResp string
 	var torrents []torrent.Torrent
 	switch command {
@@ -153,4 +156,19 @@ func sendCommandResponse(msg tgbotapi.Update, command string, senderCh chan<- se
 	replyMsg.ReplyToMessageID = msg.Message.MessageID
 	senderCh <- sender{ChatID: msg.Message.Chat.ID, Type: constants.Torrent, MsgConfig: replyMsg, Torrents: torrents}
 
+}
+
+// sendRecommendMsg
+func sendRecommendMsg() {
+	if constants.IsRecommendationOn {
+		defer recoverPanic()
+		logger.Info("Sending Recommendation Message")
+		users := db.GetAllUsers()
+		bot := getBot()
+		for _, user := range users {
+			msg := strings.Replace(constants.RecommendMsg, "${NAME}", user.FirstName, 1)
+			msgConf := tgbotapi.NewMessage(user.UserID, msg)
+			bot.Send(msgConf)
+		}
+	}
 }

@@ -1,13 +1,16 @@
 package constants
 
+// Internal config
 const (
 	LogPath   = "./logs/system/log.log"
 	DBLogPath = "./logs/db/log.log"
 	DBPath    = "./db/users.db"
 
-	TorrentCount = 7
+	TorrentCount = 10
 	RecentCount  = 10
 )
+
+// URLs
 
 const (
 	ApiURL           = "https://apibay.org/q.php"
@@ -19,6 +22,23 @@ const (
 	MagnetLink string = "magnet:?xt=urn:btih:${INFO_HASH}&dn=${NAME}${TRACKERS}"
 )
 
+// Recommendation
+var (
+	IsRecommendationOn bool = true
+)
+
+const (
+	RecommendMsg string = `Hi ${NAME} ✌️
+
+	Thank you for letting me save your time ❤️.
+	If you like me, why don't invite your friends too. I am sure they will like me too 😁.
+	Please share the below link to let them know about me 😊
+	https://t.me/torrent_genie_bot
+	
+	Ciao 🤖`
+)
+
+// Recent codes
 type RecentCode string
 
 const (
@@ -50,7 +70,8 @@ const (
 	INVALID_REPLY        = "Invalid reply, please try again"
 	SOMETHING_WENT_WRONG = "Something went wrong, please try again"
 	NO_RESULTS           = "No torrents found"
-	INVALID_COMMAND      = "Admin use only"
+	INVALID_COMMAND      = "Invalid Command"
+	ADMIN_COMMAND        = "Admin use only"
 )
 
 type MessageType string
