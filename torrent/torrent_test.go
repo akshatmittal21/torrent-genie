@@ -37,13 +37,13 @@ type recentTorrent struct {
 }
 
 var recentTorrents = []recentTorrent{
-	{constants.RecentAllCode, make([]Torrent, 10)},
-	{constants.AudioCode, make([]Torrent, 10)},
-	{constants.GamesCode, make([]Torrent, 10)},
-	{constants.VideoCode, make([]Torrent, 10)},
-	{constants.ApplicationsCode, make([]Torrent, 10)},
-	{constants.PornCode, make([]Torrent, 10)},
-	{constants.OthersCode, make([]Torrent, 10)},
+	{constants.RecentAllCode, make([]Torrent, constants.RecentCount)},
+	{constants.AudioCode, make([]Torrent, constants.RecentCount)},
+	{constants.GamesCode, make([]Torrent, constants.RecentCount)},
+	{constants.VideoCode, make([]Torrent, constants.RecentCount)},
+	{constants.ApplicationsCode, make([]Torrent, constants.RecentCount)},
+	{constants.PornCode, make([]Torrent, constants.RecentCount)},
+	{constants.OthersCode, make([]Torrent, constants.RecentCount)},
 }
 
 func TestGetRecentTorrents(t *testing.T) {
