@@ -36,6 +36,7 @@ func getBot() *tgbotapi.BotAPI {
 			func() {
 				var err error
 				bot, err = tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
+
 				if err != nil {
 					logger.Error("Error creating bot", err)
 					os.Exit(1)
@@ -49,7 +50,7 @@ func getBot() *tgbotapi.BotAPI {
 func Init(ch chan os.Signal) error {
 
 	var err error
-	var isServerAlive bool
+	var isServerAlive = true
 	bot := getBot()
 
 	logger.Info("Authorized on account ", bot.Self.UserName)
