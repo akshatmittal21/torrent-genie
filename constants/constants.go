@@ -6,8 +6,8 @@ const (
 	DBLogPath = "./logs/db/log.log"
 	DBPath    = "./db/users.db"
 
-	TorrentCount = 10
-	RecentCount  = 10
+	TorrentCount = 15
+	RecentCount  = 15
 )
 
 // URLs
@@ -72,6 +72,7 @@ const (
 	NO_RESULTS           = "No torrents found"
 	INVALID_COMMAND      = "Invalid Command"
 	ADMIN_COMMAND        = "Admin use only"
+	SERVER_DOWN          = "Torrent server is down, please try again later"
 )
 
 type MessageType string
@@ -79,4 +80,9 @@ type MessageType string
 const (
 	Magnet  MessageType = "magnet"
 	Torrent             = "torrent"
+)
+
+// ping timeout
+const (
+	PingTimeout = 10 * 60
 )
