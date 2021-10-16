@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/akshatmittal21/torrent-genie/constants"
 	"github.com/akshatmittal21/torrent-genie/logger"
@@ -117,4 +118,22 @@ func CreateResponse(torrents []Torrent) string {
 
 	}
 	return response
+}
+
+func ServerStatus(status chan<- bool) {
+	for range time.Tick(time.Second * constants.PingTimeout) {
+		resp, err := http.Get(constants.ApiURL)
+		if err != nil {
+			logger.Error("ServerStatus: fetch err ", err)
+			status <- false
+		}
+		if resp != nil && resp.StatusCode == 200 {
+			status <- true
+		} else {
+			logger.Error("ServerStatus: server is down ")
+			status <- false
+		}
+
+	}
+
 }

@@ -49,6 +49,7 @@ func getBot() *tgbotapi.BotAPI {
 func Init(ch chan os.Signal) error {
 
 	var err error
+	var isServerAlive bool
 	bot := getBot()
 
 	logger.Info("Authorized on account ", bot.Self.UserName)
@@ -59,8 +60,16 @@ func Init(ch chan os.Signal) error {
 	// init channels
 	senderCh := make(chan sender, 100)
 	messengerCh := make(chan messenger, 100)
+	serverStatus := make(chan bool)
 
 	go startSender(bot, senderCh, messengerCh)
+
+	go func() {
+		for v := range serverStatus {
+			isServerAlive = v
+		}
+	}()
+	go torrent.ServerStatus(serverStatus)
 
 	go func(ch <-chan messenger) {
 		for data := range ch {
@@ -123,6 +132,14 @@ func Init(ch chan os.Signal) error {
 				continue
 
 			}
+
+			// Checking server status
+			if !isServerAlive {
+				msg := tgbotapi.NewMessage(msg.Message.Chat.ID, constants.SERVER_DOWN)
+				bot.Send(msg)
+				continue
+			}
+
 			if msg.Message.Command() == "togglerecommend" {
 				adminID, err := strconv.ParseInt(os.Getenv("BOT_ADMIN"), 10, 64)
 				if err != nil {
