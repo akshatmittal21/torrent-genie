@@ -20,7 +20,7 @@ type Server struct {
 func (s *Server) Start() {
 
 	log := initLog("./logs/system/log", "development")
-	db := initDB("./db/db.sqlite3", log)
+	db := initDB("./db/users.db", log)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
