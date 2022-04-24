@@ -1,59 +1,53 @@
-package bot
+package telegram
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/akshatmittal21/torrent-genie/constants"
-	"github.com/akshatmittal21/torrent-genie/db"
-	"github.com/akshatmittal21/torrent-genie/logger"
-	"github.com/akshatmittal21/torrent-genie/magnet"
-	"github.com/akshatmittal21/torrent-genie/torrent"
+	"github.com/akshatmittal21/torrent-genie/dto"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-type sender struct {
-	ChatID    int64
-	Type      constants.MessageType
-	MsgConfig tgbotapi.Chattable
-	Torrents  []torrent.Torrent
-}
-
 // Default sender
-func startSender(bot *tgbotapi.BotAPI, senderCh <-chan sender, messengerCh chan<- messenger) {
-	defer recoverPanic()
+func (b *Bot) startSender(senderCh <-chan sender, messengerCh chan<- messenger) {
+	defer b.recoverPanic()
 
 	for data := range senderCh {
 		var err error
 		var update tgbotapi.Message
 		switch data.Type {
 		case constants.Magnet:
-			_, err = bot.Send(data.MsgConfig)
+			_, err = b.tgbot.Send(data.MsgConfig)
 		case constants.Torrent:
-			update, err = bot.Send(data.MsgConfig)
+			update, err = b.tgbot.Send(data.MsgConfig)
 			if err == nil {
 				messengerCh <- messenger{ChatID: data.ChatID, msgLog: msgLog{MessageID: update.MessageID, Torrents: data.Torrents}}
 			}
-
 		}
 		if err != nil {
-			logger.Error(err)
+			b.log.Error(err)
 			replyMsg := tgbotapi.NewMessage(data.ChatID, constants.SOMETHING_WENT_WRONG)
-			bot.Send(replyMsg)
+			_, err = b.tgbot.Send(replyMsg)
+			if err != nil {
+				b.log.Error(fmt.Errorf("Error sending message: %s", err))
+			}
 		}
 	}
 }
 
 // Sending magnet link
-func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, senderCh chan<- sender) {
-	defer recoverPanic()
-	var msgID int
-	var torrents []torrent.Torrent
-	var replyMsg tgbotapi.MessageConfig
-
+func (b *Bot) sendMagnet(msg tgbotapi.Update, replyNo int, senderCh chan<- sender) {
+	defer b.recoverPanic()
+	var (
+		msgID    int
+		torrents []dto.Torrent
+		replyMsg tgbotapi.MessageConfig
+	)
 	if msg.Message.ReplyToMessage != nil {
 		msgID = msg.Message.ReplyToMessage.MessageID
 	}
-	msglog := msgLogs[msg.Message.Chat.ID]
+	msglog := b.msgLog[msg.Message.Chat.ID]
 	if len(msglog) > 0 {
 		if msgID == 0 {
 			torrents = msglog[len(msglog)-1].Torrents
@@ -69,13 +63,13 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 	if replyNo > 0 && len(torrents) > 0 && len(torrents) >= replyNo {
 		tor := torrents[replyNo-1]
 
-		torrentData := magnet.GetFile(tor.InfoHash)
+		torrentData := b.magnet.GetFile(tor.InfoHash)
 
 		if torrentData != nil {
 			file := tgbotapi.FileBytes{Name: tor.Name + ".torrent", Bytes: torrentData}
 			newMsg := tgbotapi.NewDocumentUpload(msg.Message.Chat.ID, file)
 
-			magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
+			magnetLink := b.magnet.GetLink(tor.InfoHash, tor.Name)
 			msgstring := "Copy the magnet below or download the torrent file" + "\n\n" + "`" + magnetLink + "`"
 
 			newMsg.ReplyToMessageID = msg.Message.MessageID
@@ -84,7 +78,7 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 			senderCh <- sender{ChatID: msg.Message.Chat.ID, Type: constants.Magnet, MsgConfig: newMsg}
 			return
 		} else {
-			magnetLink := magnet.GetLink(tor.InfoHash, tor.Name)
+			magnetLink := b.magnet.GetLink(tor.InfoHash, tor.Name)
 			msgstring := tor.Name + "\n\n" + "Copy the magnet below" + "\n\n" + "`" + magnetLink + "`"
 			replyMsg = tgbotapi.NewMessage(msg.Message.Chat.ID, msgstring)
 			replyMsg.ParseMode = tgbotapi.ModeMarkdown
@@ -99,15 +93,17 @@ func sendMagnet(msg tgbotapi.Update, msgLogs map[int64][]msgLog, replyNo int, se
 }
 
 // Sending torrents
-func sendTorrents(msg tgbotapi.Update, senderCh chan<- sender) {
-	defer recoverPanic()
+func (b *Bot) sendTorrents(msg tgbotapi.Update, senderCh chan<- sender) {
+	defer b.recoverPanic()
 	var torrentResp string
-	torrents := torrent.GetTorrents(msg.Message.Text)
-	if len(torrents) > 0 {
+	torrents, err := b.torrent.GetTorrents(msg.Message.Text)
+	if err != nil {
+		torrentResp = constants.SOMETHING_WENT_WRONG
+	} else if len(torrents) > 0 {
 		if torrents[0].ID == "0" {
 			torrentResp = constants.NO_RESULTS
 		} else {
-			torrentResp = torrent.CreateResponse(torrents)
+			torrentResp = dto.CreateResponse(torrents)
 			torrentResp = torrentResp + "\nReply with option number to get torrent.."
 		}
 	} else {
@@ -120,33 +116,18 @@ func sendTorrents(msg tgbotapi.Update, senderCh chan<- sender) {
 }
 
 // Sending torrents
-func sendCommandResponse(msg tgbotapi.Update, command string, senderCh chan<- sender) {
-	defer recoverPanic()
+func (b *Bot) sendCommandResponse(msg tgbotapi.Update, command string, senderCh chan<- sender) {
+	defer b.recoverPanic()
 	var torrentResp string
-	var torrents []torrent.Torrent
-	switch command {
-	case constants.RECENT:
-		torrents = torrent.GetRecentTorrents(constants.RecentAllCode)
-	case constants.TOPAUDIO:
-		torrents = torrent.GetRecentTorrents(constants.AudioCode)
-	case constants.TOPVIDEOS:
-		torrents = torrent.GetRecentTorrents(constants.VideoCode)
-	case constants.TOPAPPLICATIONS:
-		torrents = torrent.GetRecentTorrents(constants.ApplicationsCode)
-	case constants.TOPPORN:
-		torrents = torrent.GetRecentTorrents(constants.PornCode)
-	case constants.TOPGAMES:
-		torrents = torrent.GetRecentTorrents(constants.GamesCode)
-	case constants.OTHERS:
-		torrents = torrent.GetRecentTorrents(constants.OthersCode)
-
-	}
-
-	if len(torrents) > 0 {
+	var torrents []dto.Torrent
+	torrents, err := b.torrent.GetRecentTorrents(constants.Command(command))
+	if err != nil {
+		torrentResp = constants.SOMETHING_WENT_WRONG
+	} else if len(torrents) > 0 {
 		if torrents[0].ID == "0" {
 			torrentResp = constants.NO_RESULTS
 		} else {
-			torrentResp = torrent.CreateResponse(torrents)
+			torrentResp = dto.CreateResponse(torrents)
 			torrentResp = torrentResp + "\nReply with option number to get torrent.."
 		}
 	} else {
@@ -159,16 +140,18 @@ func sendCommandResponse(msg tgbotapi.Update, command string, senderCh chan<- se
 }
 
 // sendRecommendMsg
-func sendRecommendMsg() {
+func (b *Bot) sendRecommendMsg() {
 	if constants.IsRecommendationOn {
-		defer recoverPanic()
-		logger.Info("Sending Recommendation Message")
-		users := db.GetAllUsers()
-		bot := getBot()
+		defer b.recoverPanic()
+		b.log.Info("Sending Recommendation Message")
+		users := b.db.GetAllUsers()
 		for _, user := range users {
 			msg := strings.Replace(constants.RecommendMsg, "${NAME}", user.FirstName, 1)
 			msgConf := tgbotapi.NewMessage(user.UserID, msg)
-			bot.Send(msgConf)
+			_, err := b.tgbot.Send(msgConf)
+			if err != nil {
+				b.log.Error(fmt.Errorf("error sending message: %s", err))
+			}
 		}
 	}
 }

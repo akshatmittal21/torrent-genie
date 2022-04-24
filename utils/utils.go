@@ -1,4 +1,4 @@
-package torrent
+package utils
 
 import (
 	"math"
@@ -23,7 +23,7 @@ func round(val float64, roundOn float64, places int) (newVal float64) {
 	return
 }
 
-func getSize(sizeString string) string {
+func GetFileSize(sizeString string) string {
 	if sizeString == "" {
 		return ""
 	}

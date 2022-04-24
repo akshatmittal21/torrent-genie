@@ -2,23 +2,22 @@ name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches: [master, dev]
 
 jobs:
-
   build:
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.17
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
 
-    - name: Build
-      run: go build 
-    - name: Test
-      run: go test -v ./...
-    - name: Restarting service
-      run: sudo systemctl restart torrent-genie
+      - name: Build
+        run: make build
+      - name: Test
+        run: make test
+      - name: Restarting service
+        run: sudo systemctl restart torrent-genie
