@@ -38,30 +38,19 @@ const (
 	Ciao 🤖`
 )
 
-// Recent codes
-type RecentCode string
-
-const (
-	RecentAllCode    RecentCode = "recent"
-	AudioCode                   = "100"
-	GamesCode                   = "400"
-	VideoCode                   = "200"
-	PornCode                    = "500"
-	ApplicationsCode            = "300"
-	OthersCode                  = "600"
-)
+type Command string
 
 //commands
 const (
-	START           string = "start"
-	USERS                  = "users"
-	RECENT                 = "recent"
-	TOPVIDEOS              = "topvideos"
-	TOPAUDIO               = "topaudio"
-	TOPGAMES               = "topgames"
-	TOPPORN                = "topporn"
-	TOPAPPLICATIONS        = "topapplications"
-	OTHERS                 = "others"
+	START           Command = "start"
+	USERS                   = "users"
+	RECENT                  = "recent"
+	TOPVIDEOS               = "topvideos"
+	TOPAUDIO                = "topaudio"
+	TOPGAMES                = "topgames"
+	TOPPORN                 = "topporn"
+	TOPAPPLICATIONS         = "topapplications"
+	OTHERS                  = "others"
 )
 
 // messages

@@ -1,4 +1,4 @@
-package torrent
+package utils
 
 import "testing"
 
@@ -19,7 +19,7 @@ var addTests = []addTest{
 func TestGetSize(t *testing.T) {
 	t.Log("TestGetSize")
 	for _, test := range addTests {
-		if output := getSize(test.arg1); test.expected != output {
+		if output := GetFileSize(test.arg1); test.expected != output {
 			t.Errorf("Output %q not equal to expected %q", output, test.expected)
 		}
 	}

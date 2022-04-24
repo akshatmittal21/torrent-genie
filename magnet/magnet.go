@@ -11,7 +11,21 @@ import (
 	"github.com/akshatmittal21/torrent-genie/logger"
 )
 
-func GetLink(infoHash string, name string) string {
+type magnet struct {
+	log logger.Logger
+}
+
+type Magnet interface {
+	GetLink(infoHash string, name string) string
+	GetFile(infoHash string) []byte
+}
+
+func NewServer(log logger.Logger) Magnet {
+	return &magnet{
+		log: log,
+	}
+}
+func (m *magnet) GetLink(infoHash string, name string) string {
 	magnetLink := constants.MagnetLink
 	name = url.QueryEscape(name)
 	magnetLink = strings.Replace(magnetLink, "${INFO_HASH}", infoHash, 1)
@@ -20,7 +34,7 @@ func GetLink(infoHash string, name string) string {
 	return magnetLink
 }
 
-func GetFile(infoHash string) []byte {
+func (m *magnet) GetFile(infoHash string) []byte {
 	torrentLink := constants.TorrentURL
 	torrentLink = strings.Replace(torrentLink, "${INFO_HASH}", infoHash, 1)
 	client := http.Client{
@@ -28,13 +42,13 @@ func GetFile(infoHash string) []byte {
 	}
 	resp, err := client.Get(torrentLink)
 	if err != nil {
-		logger.Error("GetFile: fetch err ", err)
+		m.log.Error("GetFile: fetch err ", err)
 		return nil
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("GetFile: reading err ", err)
+		m.log.Error("GetFile: reading err ", err)
 		return nil
 	}
 	return body
