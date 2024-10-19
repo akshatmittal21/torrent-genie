@@ -15,9 +15,9 @@ jobs:
         with:
           go-version: 1.22
       - name: Installing Pre-requisites
-        run: sudo apt-get update && sudo apt-get -y install make
+        run: sudo apt-get update && sudo apt-get -y install make gcc
       - name: Build
-        run: make build
+        run: CGO_ENABLED=1 make build
       - name: Test
         run: make test
       - name: Restarting service
