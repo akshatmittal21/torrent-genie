@@ -3,7 +3,8 @@ name: Go
 on:
   push:
     branches: [master, dev]
-
+  workflow_dispatch:
+  
 jobs:
   build:
     runs-on: self-hosted
