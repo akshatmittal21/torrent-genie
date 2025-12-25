@@ -24,7 +24,7 @@ const (
 
 // Recommendation
 var (
-	IsRecommendationOn bool = true
+	IsRecommendationOn bool = false
 )
 
 const (
